@@ -450,7 +450,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Documentation**: Check this README and inline code comments
 - **Issues**: Create an issue on GitHub
-- **Email**: support@secureverify.in
+- **Email**: faizankhanm63611@gmail.com
 
 ## 🎯 Roadmap
 
