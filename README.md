@@ -1,6 +1,6 @@
-# 🚀 SecureVerify - India's Digital Identity & Governance Platform
+# 🚀 SarvOne - India's Digital Identity & Governance Platform
 
-**SecureVerify** is a revolutionary end-to-end digital identity and governance platform that transforms how Indian citizens interact with government services, financial institutions, and educational organizations. Built with Laravel, FastAPI, Tailwind CSS, and blockchain technology.
+**SarvOne** is a revolutionary end-to-end digital identity and governance platform that transforms how Indian citizens interact with government services, financial institutions, and educational organizations. Built with Laravel, FastAPI, Tailwind CSS, and blockchain technology.
 
 ## 🎯 Features
 
@@ -14,7 +14,7 @@
 ## 🏗️ Architecture
 
 ```
-SecureVerify/
+SarvOne/
 ├── Laravel Backend (PHP 8.2+)          # Main application logic
 ├── FastAPI Service (Python 3.8+)       # Blockchain & AI services
 ├── Frontend (Tailwind CSS + Vite)      # User interface
@@ -43,8 +43,8 @@ SecureVerify/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/secureverify.git
-cd secureverify
+git clone https://github.com/yourusername/SarvOne.git
+cd SarvOne
 ```
 
 ### 2. Laravel Backend Setup
@@ -256,7 +256,7 @@ curl http://localhost:8000/api/government-schemes
 
 ### Project Structure
 ```
-secureverify/
+SarvOne/
 ├── app/
 │   ├── Http/Controllers/     # Laravel controllers
 │   ├── Models/              # Eloquent models
@@ -318,10 +318,10 @@ php artisan view:cache
 ```bash
 # Build Docker image
 cd fastapi_service
-docker build -t secureverify-fastapi .
+docker build -t SarvOne-fastapi .
 
 # Run with production settings
-docker run -d -p 8001:8001 secureverify-fastapi
+docker run -d -p 8001:8001 SarvOne-fastapi
 ```
 
 #### 3. Database Migration
@@ -354,7 +354,7 @@ tail -f storage/logs/laravel.log
 ### FastAPI Logs
 ```bash
 # If using Docker
-docker logs secureverify-fastapi
+docker logs SarvOne-fastapi
 
 # If using local Python
 tail -f fastapi_service/logs/app.log
@@ -465,4 +465,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ for India's Digital Transformation**
 
-*SecureVerify - Empowering Every Indian Citizen with Digital Identity*
+*SarvOne - Empowering Every Indian Citizen with Digital Identity*
