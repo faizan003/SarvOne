@@ -141,8 +141,8 @@
         }
         
         .status-active { background: #dcfce7; color: #166534; }
-        .status-expired { background: #fee2e2; color: #dc2626; }
-        .status-revoked { background: #fef3c7; color: #d97706; }
+        .status-expired { background: #fef3c7; color: #92400e; }
+        .status-revoked { background: #fee2e2; color: #991b1b; }
         
         @media (min-width: 768px) {
             .mobile-container {
@@ -1063,12 +1063,16 @@
                             
                             <div class="flex items-center space-x-2">
                                 <span class="status-badge status-${vc.status} px-2 py-1 rounded-full text-xs font-medium">
-                                    ${vc.status.toUpperCase()}
+                                    ${vc.status === 'revoked' ? '<i class="fas fa-ban mr-1"></i>REVOKED' : 
+                                      vc.status === 'expired' ? '<i class="fas fa-clock mr-1"></i>EXPIRED' : 
+                                      vc.status.toUpperCase()}
                                 </span>
                                 <span class="text-xs text-gray-500">
                                     Issued ${new Date(vc.issued_at).toLocaleDateString()}
                                 </span>
-                                ${vc.blockchain_verified ? 
+                                ${vc.status === 'revoked' ? 
+                                    '<span class="text-xs text-red-600"><i class="fas fa-ban"></i> Revoked</span>' :
+                                    vc.blockchain_verified ? 
                                     '<span class="text-xs text-green-600"><i class="fas fa-check-circle"></i> Verified</span>' : 
                                     '<span class="text-xs text-yellow-600"><i class="fas fa-clock"></i> Not verified</span>'
                                 }
@@ -1114,6 +1118,20 @@
                                 <div>
                                     <span class="text-sm font-medium text-gray-700">Expires</span>
                                     <p class="text-sm text-gray-600">${new Date(vc.expires_at).toLocaleDateString()}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${vc.status === 'revoked' && vc.revoked_at ? `
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Revoked At</span>
+                                    <p class="text-sm text-red-600">${new Date(vc.revoked_at).toLocaleString()}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${vc.status === 'revoked' && vc.revocation_reason ? `
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Revocation Reason</span>
+                                    <p class="text-sm text-red-600">${vc.revocation_reason}</p>
                                 </div>
                             ` : ''}
                             

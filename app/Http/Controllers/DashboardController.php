@@ -825,18 +825,11 @@ class DashboardController extends Controller
             return redirect()->route('login');
         }
 
-        // Get credential access logs for this user
-        $accessLogs = \DB::table('credential_access_logs')
-            ->where('user_did', $user->did)
+        // Get credential access logs for this user using Eloquent model
+        $accessLogs = \App\Models\AccessLog::where('user_did', $user->did)
+            ->with(['organization', 'accessFlags'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
-
-        // Convert string dates to Carbon objects for the paginated collection
-        $accessLogs->getCollection()->transform(function ($log) {
-            $log->created_at = \Carbon\Carbon::parse($log->created_at);
-            $log->updated_at = \Carbon\Carbon::parse($log->updated_at);
-            return $log;
-        });
 
         return view('access-history', compact('user', 'accessLogs'));
     }

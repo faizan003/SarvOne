@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Access History - SarvOne</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -141,7 +142,9 @@
                 <!-- Mobile Cards Layout -->
                 <div class="block sm:hidden" id="mobile-access-logs">
                     @foreach($accessLogs as $log)
-                        <div class="border-b border-gray-200 p-4">
+                        <div class="border-b border-gray-200 p-4 relative @if($log->hasFlags()) bg-red-50 border-l-4 border-l-red-400 @endif">
+
+                            
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-8 w-8">
@@ -153,9 +156,9 @@
                                         <div class="text-sm font-medium text-gray-900">
                                             {{ $log->organization_name }}
                                         </div>
-                                                                        <div class="text-xs text-gray-500">
-                                    {{ \Carbon\Carbon::parse($log->created_at)->format('M d, Y h:i A') }}
-                                </div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ \Carbon\Carbon::parse($log->created_at)->format('M d, Y h:i A') }}
+                                        </div>
                                     </div>
                                 </div>
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
@@ -185,14 +188,25 @@
                             </div>
                             
                             <div class="mt-3 pt-3 border-t border-gray-100">
-                                <div class="flex items-center text-xs text-gray-600">
-                                    <i class="fas fa-bell text-green-600 mr-2"></i>
-                                    <span>SMS notification sent to your phone</span>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center text-xs text-gray-600">
+                                        <i class="fas fa-bell text-green-600 mr-2"></i>
+                                        <span>SMS notification sent to your phone</span>
+                                    </div>
+                                    <!-- Mobile Flag Action - More prominent -->
+                                    @if(!$log->hasFlags())
+                                        <button onclick="showFlagModal({{ $log->id }}, '{{ $log->organization_name }}')" 
+                                                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors duration-200 border border-red-200 flag-button">
+                                            <i class="fas fa-flag mr-1"></i>Report Issue
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
                     @endforeach
                 </div>
+
+
 
                 <!-- Desktop Table Layout -->
                 <div class="hidden sm:block overflow-x-auto" id="desktop-access-logs">
@@ -205,6 +219,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -266,6 +281,18 @@
                                                 <span>SMS notification sent</span>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        @if($log->hasFlags())
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <i class="fas fa-flag mr-1"></i>Flagged
+                                            </span>
+                                        @else
+                                            <button onclick="showFlagModal({{ $log->id }}, '{{ $log->organization_name }}')" 
+                                                    class="text-red-600 hover:text-red-900 text-sm">
+                                                <i class="fas fa-flag mr-1"></i>Flag Access
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
@@ -547,6 +574,180 @@
         // Load access logs when page loads
         document.addEventListener('DOMContentLoaded', function() {
             // Initial load is handled by server-side rendering
+        });
+    </script>
+
+    <!-- Flag Access Modal -->
+    <div id="flagModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Flag Unauthorized Access</h3>
+                    <button onclick="hideFlagModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-2">Are you sure you want to flag this access as unauthorized?</p>
+                    <div class="bg-gray-50 p-3 rounded-md">
+                        <p class="text-sm font-medium text-gray-900" id="flagAccessDetails"></p>
+                    </div>
+                </div>
+                
+                <form id="flagForm">
+                    @csrf
+                    <div class="mb-4">
+                        <label for="flag_type" class="block text-sm font-medium text-gray-700 mb-2">Flag Type *</label>
+                        <select id="flag_type" name="flag_type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="">Select flag type...</option>
+                            <option value="unauthorized_access">Unauthorized Access</option>
+                            <option value="suspicious_activity">Suspicious Activity</option>
+                            <option value="data_misuse">Data Misuse</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="flag_reason" class="block text-sm font-medium text-gray-700 mb-2">Reason for Flagging *</label>
+                        <textarea id="flag_reason" name="flag_reason" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Please provide details about why you believe this access was unauthorized..." required></textarea>
+                    </div>
+                    
+                    <div class="flex items-center justify-end space-x-3">
+                        <button type="button" onclick="hideFlagModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200">
+                            Cancel
+                        </button>
+                        <button type="submit" id="flagButton" class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <span class="flex items-center">
+                                <i class="fas fa-flag mr-2"></i>
+                                Flag Access
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        let currentAccessLogId = null;
+
+
+
+        function showFlagModal(accessLogId, organizationName) {
+            currentAccessLogId = accessLogId;
+            document.getElementById('flagAccessDetails').textContent = `Organization: ${organizationName}`;
+            document.getElementById('flagModal').classList.remove('hidden');
+        }
+
+        function hideFlagModal() {
+            document.getElementById('flagModal').classList.add('hidden');
+            document.getElementById('flagForm').reset();
+            currentAccessLogId = null;
+        }
+
+        // Ensure the form exists before adding event listener
+        const flagForm = document.getElementById('flagForm');
+        if (flagForm) {
+        
+        flagForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const button = document.getElementById('flagButton');
+            const originalText = button.innerHTML;
+            
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Flagging...';
+            button.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('flag_type', document.getElementById('flag_type').value);
+            formData.append('flag_reason', document.getElementById('flag_reason').value);
+            
+            // Get CSRF token from the form
+            const csrfInput = document.querySelector('input[name="_token"]');
+            const csrfToken = csrfInput ? csrfInput.value : '';
+            
+            if (!csrfToken) {
+                showNotification('CSRF token not found. Please refresh the page and try again.', 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
+                return;
+            }
+            
+            fetch(`/flag-access/${currentAccessLogId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showNotification('Access has been flagged for government review', 'success');
+                    hideFlagModal();
+                    // Reload the page to update the table
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showNotification(data.message || 'Failed to flag access', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (error.message.includes('HTTP error! status: 419')) {
+                    showNotification('Session expired. Please refresh the page and try again.', 'error');
+                } else if (error.message.includes('HTTP error! status: 422')) {
+                    showNotification('Please check your input and try again.', 'error');
+                } else {
+                    showNotification('An error occurred while flagging the access. Please try again.', 'error');
+                }
+            })
+            .finally(() => {
+                // Restore button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        });
+
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove notification after 5 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function(e) {
+            const flagModal = document.getElementById('flagModal');
+            if (e.target === flagModal) {
+                hideFlagModal();
+            }
         });
     </script>
 </body>

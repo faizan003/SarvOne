@@ -91,6 +91,22 @@
                 </div>
             </div>
         </div>
+
+        <!-- Manage VCs Card -->
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-sm p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Manage Credentials</h3>
+                    <p class="text-purple-100 text-sm mb-4">View and revoke issued credentials</p>
+                    <a href="{{ route('organization.issued-vcs') }}" class="inline-flex items-center px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium">
+                        <i class="fas fa-list mr-2"></i>View Issued VCs
+                    </a>
+                </div>
+                <div class="h-16 w-16 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-certificate text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Organization Details & Recent Activity -->

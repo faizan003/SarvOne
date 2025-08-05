@@ -41,6 +41,7 @@ Route::get('/opportunity-hub', [DashboardController::class, 'opportunityHub'])->
 
 // Public API routes (no authentication required)
 Route::get('/api/government-schemes', [DashboardController::class, 'getGovernmentSchemes'])->name('api.government-schemes');
+Route::get('/api/vc/status/{vcId}', [OrganizationController::class, 'getVCStatus'])->name('api.vc.status');
 
 // API routes for mobile (require authentication)
 Route::middleware('auth')->group(function () {
@@ -89,6 +90,10 @@ Route::prefix('organization')->group(function () {
         Route::get('/api/test-ipfs', [OrganizationController::class, 'testIPFS'])->name('organization.test-ipfs');
         Route::get('/api-documentation', [OrganizationController::class, 'apiDocumentation'])->name('organization.api-documentation');
         Route::post('/regenerate-api-key', [OrganizationController::class, 'regenerateApiKey'])->name('organization.regenerate-api-key');
+        
+        // VC Management routes
+        Route::get('/issued-vcs', [OrganizationController::class, 'showIssuedVCs'])->name('organization.issued-vcs');
+        Route::post('/revoke-vc/{vcId}', [OrganizationController::class, 'revokeVC'])->name('organization.revoke-vc');
     });
 });
 
@@ -110,6 +115,9 @@ Route::prefix('government')->group(function () {
         Route::post('/schemes/{id}/toggle-status', [GovernmentController::class, 'toggleStatus'])->name('government.toggle-status');
         Route::get('/api/stats', [GovernmentController::class, 'getStats'])->name('government.api.stats');
         Route::get('/api-documentation', [GovernmentController::class, 'apiDocumentation'])->name('government.api-documentation');
+        Route::get('/flagged-access', function() {
+            return view('government.flagged-access');
+        })->name('government.flagged-access');
     });
 });
 
@@ -170,4 +178,22 @@ Route::prefix('gov')->group(function () {
     Route::get('/approval/simulate-documents', [App\Http\Controllers\AdminController::class, 'showSimulateDocuments'])->name('admin.simulate.documents');
     Route::post('/approval/simulate-documents/lookup-user', [App\Http\Controllers\AdminController::class, 'lookupUserForSimulation'])->name('admin.simulate.lookup-user')->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
     Route::post('/approval/simulate-documents/issue', [App\Http\Controllers\AdminController::class, 'issueSimulatedDocuments'])->name('admin.simulate.issue')->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Access Flagging Routes
+|--------------------------------------------------------------------------
+*/
+// User Access Flagging Routes
+Route::middleware(['auth'])->group(function () {
+    Route::post('/flag-access/{accessLogId}', [App\Http\Controllers\AccessFlagController::class, 'flagAccess'])->name('flag.access');
+    Route::get('/user/flags', [App\Http\Controllers\AccessFlagController::class, 'getUserFlags'])->name('user.flags');
+});
+
+// Government Access Flag Review Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/government/flags', [App\Http\Controllers\AccessFlagController::class, 'getFlagsForReview'])->name('government.flags');
+    Route::post('/government/review-flag/{flagId}', [App\Http\Controllers\AccessFlagController::class, 'reviewFlag'])->name('government.review-flag');
+    Route::get('/government/organization-flags/{organizationId}', [App\Http\Controllers\AccessFlagController::class, 'getOrganizationFlags'])->name('government.organization-flags');
 });

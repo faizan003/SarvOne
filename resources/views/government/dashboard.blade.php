@@ -98,6 +98,17 @@
                 </div>
             </a>
             
+            <a href="{{ route('government.flagged-access') }}" 
+               class="flex items-center p-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition duration-200">
+                <div class="h-10 w-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-flag text-xl"></i>
+                </div>
+                <div>
+                    <p class="font-medium">Review Flagged Access</p>
+                    <p class="text-sm opacity-90">Handle unauthorized access reports</p>
+                </div>
+            </a>
+            
             <a href="{{ route('government.api-documentation') }}" 
                class="flex items-center p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition duration-200">
                 <div class="h-10 w-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-4">

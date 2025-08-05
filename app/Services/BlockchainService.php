@@ -230,7 +230,456 @@ class BlockchainService
     }
 
     /**
-     * Revoke credential on blockchain
+     * Revoke VC on SarvOne smart contract
+     *
+     * @param string $userDID The user's DID
+     * @param string $vcHash The VC hash to revoke
+     * @return array|null Returns transaction details or null on failure
+     */
+    public function revokeVC(string $userDID, string $vcHash): ?array
+    {
+        try {
+            if (!$this->contractAddress) {
+                Log::error('Contract address not configured');
+                return [
+                    'success' => false,
+                    'error' => 'Contract address not configured'
+                ];
+            }
+
+            if (!$this->fromAddress) {
+                Log::error('Blockchain wallet not configured - fromAddress is empty');
+                return [
+                    'success' => false,
+                    'error' => 'Blockchain wallet not configured. Please check BLOCKCHAIN_PRIVATE_KEY in environment.'
+                ];
+            }
+
+            Log::info('Calling smart contract revokeVC', [
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'contract_address' => $this->contractAddress,
+                'from_address' => $this->fromAddress
+            ]);
+
+            // Call the smart contract revokeVC function
+            $txHash = $this->callRevokeVC($userDID, $vcHash);
+
+            if ($txHash) {
+                Log::info('VC revoked on blockchain successfully', [
+                    'tx_hash' => $txHash,
+                    'userDID' => $userDID,
+                    'vcHash' => $vcHash,
+                    'explorer_url' => env('POLYGON_EXPLORER_URL') . '/tx/' . $txHash
+                ]);
+
+                return [
+                    'success' => true,
+                    'tx_hash' => $txHash,
+                    'userDID' => $userDID,
+                    'vcHash' => $vcHash,
+                    'explorer_url' => env('POLYGON_EXPLORER_URL') . '/tx/' . $txHash
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => 'Failed to get transaction hash from blockchain'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Failed to revoke VC on blockchain', [
+                'error' => $e->getMessage(),
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Revoke VC on SarvOne smart contract using provided private key
+     *
+     * @param string $userDID The user's DID
+     * @param string $vcHash The VC hash
+     * @param string $privateKey The private key to use for signing
+     * @return array|null Returns transaction details or null on failure
+     */
+    public function revokeVCWithPrivateKey(string $userDID, string $vcHash, string $privateKey): ?array
+    {
+        try {
+            if (!$this->contractAddress) {
+                Log::error('Contract address not configured');
+                return [
+                    'success' => false,
+                    'error' => 'Contract address not configured'
+                ];
+            }
+
+            // Get address from provided private key
+            $fromAddress = $this->getAddressFromPrivateKey($privateKey);
+
+            Log::info('Calling smart contract revokeVC with provided private key', [
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'contract_address' => $this->contractAddress,
+                'from_address' => $fromAddress
+            ]);
+
+            // Call the smart contract revokeVC function with provided private key
+            $txHash = $this->callRevokeVCWithPrivateKey($userDID, $vcHash, $privateKey, $fromAddress);
+
+            if ($txHash) {
+                Log::info('VC revoked on blockchain successfully with provided private key', [
+                    'tx_hash' => $txHash,
+                    'userDID' => $userDID,
+                    'vcHash' => $vcHash,
+                    'from_address' => $fromAddress,
+                    'explorer_url' => env('POLYGON_EXPLORER_URL') . '/tx/' . $txHash
+                ]);
+
+                return [
+                    'success' => true,
+                    'tx_hash' => $txHash,
+                    'userDID' => $userDID,
+                    'vcHash' => $vcHash,
+                    'from_address' => $fromAddress,
+                    'explorer_url' => env('POLYGON_EXPLORER_URL') . '/tx/' . $txHash
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => 'Failed to get transaction hash from blockchain'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Failed to revoke VC on blockchain with provided private key', [
+                'error' => $e->getMessage(),
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Call the smart contract revokeVC function with provided private key
+     */
+    private function callRevokeVCWithPrivateKey(string $userDID, string $vcHash, string $privateKey, string $fromAddress): string
+    {
+        try {
+            // Build the function call data for revokeVC(bytes32 userDID, bytes32 vcHash)
+            $functionData = $this->encodeRevokeVCCall($userDID, $vcHash);
+
+            // Get current nonce
+            $nonce = $this->getNonce($fromAddress);
+
+            // Build the transaction
+            $transaction = [
+                'from' => $fromAddress,
+                'to' => $this->contractAddress,
+                'gas' => '0x' . dechex($this->gasLimit),
+                'gasPrice' => '0x' . dechex((int)$this->gasPrice),
+                'value' => '0x0',
+                'data' => $functionData,
+                'nonce' => '0x' . dechex($nonce),
+                'chainId' => (int)env('POLYGON_CHAIN_ID', 80002)
+            ];
+
+            Log::info('Sending revokeVC transaction with provided private key', [
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'from_address' => $fromAddress,
+                'transaction' => $transaction
+            ]);
+
+            // Sign and send the transaction with provided private key
+            $signedTransaction = $this->signTransactionWithPrivateKey($transaction, $privateKey);
+            $txHash = $this->sendRawTransaction($signedTransaction);
+
+            if (!$txHash) {
+                throw new \Exception('Failed to send revokeVC transaction to blockchain');
+            }
+
+            return $txHash;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to call smart contract revokeVC with provided private key', [
+                'error' => $e->getMessage(),
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'from_address' => $fromAddress,
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Call the smart contract revokeVC function
+     */
+    private function callRevokeVC(string $userDID, string $vcHash): string
+    {
+        try {
+            // Build the function call data for revokeVC(bytes32 userDID, bytes32 vcHash)
+            $functionData = $this->encodeRevokeVCCall($userDID, $vcHash);
+
+            // Get current nonce
+            $nonce = $this->getNonce($this->fromAddress);
+
+            // Build the transaction
+            $transaction = [
+                'from' => $this->fromAddress,
+                'to' => $this->contractAddress,
+                'gas' => '0x' . dechex($this->gasLimit),
+                'gasPrice' => '0x' . dechex((int)$this->gasPrice),
+                'value' => '0x0',
+                'data' => $functionData,
+                'nonce' => '0x' . dechex($nonce),
+                'chainId' => (int)env('POLYGON_CHAIN_ID', 80002)
+            ];
+
+            Log::info('Sending revokeVC transaction', [
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'transaction' => $transaction
+            ]);
+
+            // Sign and send the transaction
+            $signedTransaction = $this->signTransaction($transaction);
+            $txHash = $this->sendRawTransaction($signedTransaction);
+
+            if (!$txHash) {
+                throw new \Exception('Failed to send revokeVC transaction to blockchain');
+            }
+
+            return $txHash;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to call smart contract revokeVC', [
+                'error' => $e->getMessage(),
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Encode the revokeVC function call
+     */
+    private function encodeRevokeVCCall(string $userDID, string $vcHash): string
+    {
+        try {
+            // Function signature: revokeVC(bytes32,bytes32)
+            $functionSignature = 'revokeVC(bytes32,bytes32)';
+            
+            // Calculate the function selector (first 4 bytes of keccak256 hash)
+            $keccakHash = Utils::keccak256($functionSignature);
+            $functionSelector = substr($keccakHash->toString(), 2, 8); // Remove 0x prefix and take first 4 bytes
+
+            // Encode parameters using ABI encoding
+            // Parameter 1: bytes32 userDID - convert DID to bytes32 hash
+            $userDIDHash = hash('sha256', $userDID, false); // Get hex without 0x prefix
+            $userDIDHex = str_pad($userDIDHash, 64, '0', STR_PAD_LEFT);
+
+            // Parameter 2: bytes32 vcHash - ensure it's properly formatted
+            $vcHashClean = str_replace('0x', '', $vcHash); // Remove 0x prefix if present
+            $vcHashHex = str_pad($vcHashClean, 64, '0', STR_PAD_LEFT);
+
+            // Combine function selector and encoded parameters
+            $encodedParams = $userDIDHex . $vcHashHex;
+
+            return '0x' . $functionSelector . $encodedParams;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to encode revokeVC function call', [
+                'error' => $e->getMessage(),
+                'userDID' => $userDID,
+                'vcHash' => $vcHash
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Issue VC on SarvOne smart contract
+     *
+     * @param string $userDID The user's DID
+     * @param string $vcHash The VC hash
+     * @param string $vcType The VC type
+     * @return array|null Returns transaction details or null on failure
+     */
+    public function issueVC(string $userDID, string $vcHash, string $vcType): ?array
+    {
+        try {
+            if (!$this->contractAddress) {
+                Log::error('Contract address not configured');
+                return null;
+            }
+
+            Log::info('Calling smart contract issueVC', [
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'vcType' => $vcType,
+                'contract_address' => $this->contractAddress
+            ]);
+
+            // Call the smart contract issueVC function
+            $txHash = $this->callIssueVC($userDID, $vcHash, $vcType);
+
+            if ($txHash) {
+                Log::info('VC issued on blockchain successfully', [
+                    'tx_hash' => $txHash,
+                    'userDID' => $userDID,
+                    'vcHash' => $vcHash,
+                    'vcType' => $vcType,
+                    'explorer_url' => env('POLYGON_EXPLORER_URL') . '/tx/' . $txHash
+                ]);
+
+                return [
+                    'success' => true,
+                    'tx_hash' => $txHash,
+                    'userDID' => $userDID,
+                    'vcHash' => $vcHash,
+                    'vcType' => $vcType,
+                    'explorer_url' => env('POLYGON_EXPLORER_URL') . '/tx/' . $txHash
+                ];
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to issue VC on blockchain', [
+                'error' => $e->getMessage(),
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'vcType' => $vcType,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Call the smart contract issueVC function
+     */
+    private function callIssueVC(string $userDID, string $vcHash, string $vcType): string
+    {
+        try {
+            // Build the function call data for issueVC(bytes32 userDID, bytes32 vcHash, string vcType)
+            $functionData = $this->encodeIssueVCCall($userDID, $vcHash, $vcType);
+
+            // Get current nonce
+            $nonce = $this->getNonce($this->fromAddress);
+
+            // Build the transaction
+            $transaction = [
+                'from' => $this->fromAddress,
+                'to' => $this->contractAddress,
+                'gas' => '0x' . dechex($this->gasLimit),
+                'gasPrice' => '0x' . dechex((int)$this->gasPrice),
+                'value' => '0x0',
+                'data' => $functionData,
+                'nonce' => '0x' . dechex($nonce),
+                'chainId' => (int)env('POLYGON_CHAIN_ID', 80002)
+            ];
+
+            Log::info('Sending issueVC transaction', [
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'vcType' => $vcType,
+                'transaction' => $transaction
+            ]);
+
+            // Sign and send the transaction
+            $signedTransaction = $this->signTransaction($transaction);
+            $txHash = $this->sendRawTransaction($signedTransaction);
+
+            if (!$txHash) {
+                throw new \Exception('Failed to send issueVC transaction to blockchain');
+            }
+
+            return $txHash;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to call smart contract issueVC', [
+                'error' => $e->getMessage(),
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'vcType' => $vcType,
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Encode the issueVC function call
+     */
+    private function encodeIssueVCCall(string $userDID, string $vcHash, string $vcType): string
+    {
+        try {
+            // Function signature: issueVC(bytes32,bytes32,string)
+            $functionSignature = 'issueVC(bytes32,bytes32,string)';
+            
+            // Calculate the function selector (first 4 bytes of keccak256 hash)
+            $keccakHash = Utils::keccak256($functionSignature);
+            $functionSelector = substr($keccakHash->toString(), 2, 8); // Remove 0x prefix and take first 4 bytes
+
+            // Encode parameters using ABI encoding
+            // Parameter 1: bytes32 userDID - convert DID to bytes32 hash
+            $userDIDHash = hash('sha256', $userDID, false); // Get hex without 0x prefix
+            $userDIDHex = str_pad($userDIDHash, 64, '0', STR_PAD_LEFT);
+
+            // Parameter 2: bytes32 vcHash - ensure it's properly formatted
+            $vcHashClean = str_replace('0x', '', $vcHash); // Remove 0x prefix if present
+            $vcHashHex = str_pad($vcHashClean, 64, '0', STR_PAD_LEFT);
+
+            // Parameter 3: string vcType
+            $vcTypeBytes = utf8_encode($vcType);
+            $vcTypeLength = strlen($vcTypeBytes);
+            $vcTypeHex = bin2hex($vcTypeBytes);
+            $vcTypePadded = str_pad($vcTypeHex, ceil(strlen($vcTypeHex) / 64) * 64, '0', STR_PAD_RIGHT);
+
+            // Combine all encoded data
+            $encodedParams = 
+                $userDIDHex . // userDID
+                $vcHashHex . // vcHash
+                '0000000000000000000000000000000000000000000000000000000000000060' . // offset to vcType string
+                str_pad(dechex($vcTypeLength), 64, '0', STR_PAD_LEFT) . $vcTypePadded; // vcType data
+
+            return '0x' . $functionSelector . $encodedParams;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to encode issueVC function call', [
+                'error' => $e->getMessage(),
+                'userDID' => $userDID,
+                'vcHash' => $vcHash,
+                'vcType' => $vcType
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Revoke credential on blockchain (legacy method - kept for compatibility)
      *
      * @param string $credentialHash The credential hash to revoke
      * @param string $reason The revocation reason
@@ -444,6 +893,123 @@ class BlockchainService
     }
 
     /**
+     * Sign transaction with provided private key
+     *
+     * @param array $transaction The transaction to sign
+     * @param string $privateKey The private key to use for signing
+     * @return string The signed transaction
+     */
+    private function signTransactionWithPrivateKey(array $transaction, string $privateKey): string
+    {
+        try {
+            // Remove 0x prefix if present
+            $privateKey = str_replace('0x', '', $privateKey);
+            
+            // Create transaction hash
+            $transactionHash = $this->createTransactionHash($transaction);
+            
+            // Sign the transaction hash with the private key
+            $signature = $this->signHashWithPrivateKey($transactionHash, $privateKey);
+            
+            // Create signed transaction
+            $signedTransaction = $this->createSignedTransaction($transaction, $signature);
+            
+            return $signedTransaction;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to sign transaction with private key', [
+                'error' => $e->getMessage(),
+                'transaction' => $transaction
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Create transaction hash for signing
+     */
+    private function createTransactionHash(array $transaction): string
+    {
+        // Create RLP encoded transaction data
+        $rlpData = $this->rlpEncode([
+            $transaction['nonce'],
+            $transaction['gasPrice'],
+            $transaction['gas'],
+            $transaction['to'],
+            $transaction['value'],
+            $transaction['data'],
+            $transaction['chainId'],
+            '', // r
+            ''  // s
+        ]);
+        
+        // Hash the RLP encoded data
+        return hash('sha3-256', hex2bin($rlpData), false);
+    }
+
+    /**
+     * Sign hash with private key
+     */
+    private function signHashWithPrivateKey(string $hash, string $privateKey): array
+    {
+        // This is a simplified implementation
+        // In production, use a proper ECDSA signing library
+        
+        // For now, we'll create a mock signature
+        // You should implement proper ECDSA signing here using secp256k1
+        
+        $r = hash('sha256', $hash . $privateKey . 'r');
+        $s = hash('sha256', $hash . $privateKey . 's');
+        
+        return [
+            'r' => $r,
+            's' => $s,
+            'v' => 27 // Recovery ID
+        ];
+    }
+
+    /**
+     * Create signed transaction
+     */
+    private function createSignedTransaction(array $transaction, array $signature): string
+    {
+        // Create RLP encoded signed transaction
+        $rlpData = $this->rlpEncode([
+            $transaction['nonce'],
+            $transaction['gasPrice'],
+            $transaction['gas'],
+            $transaction['to'],
+            $transaction['value'],
+            $transaction['data'],
+            $signature['v'],
+            $signature['r'],
+            $signature['s']
+        ]);
+        
+        return '0x' . $rlpData;
+    }
+
+    /**
+     * Simple RLP encoding (simplified implementation)
+     */
+    private function rlpEncode(array $data): string
+    {
+        // This is a very simplified RLP implementation
+        // In production, use a proper RLP library
+        
+        $encoded = '';
+        foreach ($data as $item) {
+            if (is_string($item)) {
+                $encoded .= bin2hex($item);
+            } else {
+                $encoded .= dechex($item);
+            }
+        }
+        
+        return $encoded;
+    }
+
+    /**
      * Send raw transaction
      *
      * @param string $signedTransaction The signed transaction
@@ -541,7 +1107,7 @@ class BlockchainService
      * @param string $privateKey The private key
      * @return string The address
      */
-    private function getAddressFromPrivateKey(string $privateKey): string
+    public function getAddressFromPrivateKey(string $privateKey): string
     {
         // This is a simplified implementation
         // In production, you should use proper cryptographic functions

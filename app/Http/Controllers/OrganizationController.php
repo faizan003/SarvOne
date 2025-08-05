@@ -1465,7 +1465,7 @@ class OrganizationController extends Controller
             $ipfsHash = $this->storeInIPFS($vcStructure);
             
             // Store hash on blockchain
-            $blockchainData = $this->storeOnBlockchain($credentialHash, $vcId, $organization->did);
+            $blockchainData = $this->storeOnBlockchain($credentialHash, $vcId, $organization->did, $userDID, $credentialType);
             
             \Log::info('VC stored in external systems', [
                 'ipfs_hash' => $ipfsHash,
@@ -1586,16 +1586,18 @@ class OrganizationController extends Controller
     /**
      * Store credential hash on blockchain
      */
-    private function storeOnBlockchain($credentialHash, $vcId, $issuerDID)
+    private function storeOnBlockchain($credentialHash, $vcId, $issuerDID, $userDID, $vcType)
     {
         try {
-            // Store hash on blockchain using the service
-            $blockchainResult = $this->blockchainService->storeCredentialHash($credentialHash, $vcId, $issuerDID);
+            // Use the new SarvOne smart contract issueVC method
+            $blockchainResult = $this->blockchainService->issueVC($userDID, $credentialHash, $vcType);
             
-            if ($blockchainResult) {
-                \Log::info('Credential hash stored on blockchain successfully', [
+            if ($blockchainResult && $blockchainResult['success']) {
+                \Log::info('VC issued on blockchain successfully', [
                     'vc_id' => $vcId,
+                    'user_did' => $userDID,
                     'hash' => $credentialHash,
+                    'vc_type' => $vcType,
                     'tx_hash' => $blockchainResult['tx_hash'],
                     'explorer_url' => $blockchainResult['explorer_url']
                 ]);
@@ -1604,14 +1606,17 @@ class OrganizationController extends Controller
                     'hash' => $credentialHash,
                     'tx_hash' => $blockchainResult['tx_hash'],
                     'explorer_url' => $blockchainResult['explorer_url'],
-                    'status' => $blockchainResult['status']
+                    'status' => 'success'
                 ];
             }
             
             // Fallback: generate placeholder data if blockchain fails
-            \Log::warning('Blockchain storage failed, using fallback data', [
+            \Log::warning('Blockchain issuance failed, using fallback data', [
                 'vc_id' => $vcId,
-                'hash' => $credentialHash
+                'user_did' => $userDID,
+                'hash' => $credentialHash,
+                'vc_type' => $vcType,
+                'blockchain_result' => $blockchainResult
             ]);
             
             return [
@@ -1622,10 +1627,12 @@ class OrganizationController extends Controller
             ];
             
         } catch (\Exception $e) {
-            \Log::error('Blockchain storage error', [
+            \Log::error('Blockchain issuance error', [
                 'error' => $e->getMessage(),
                 'vc_id' => $vcId,
-                'hash' => $credentialHash
+                'user_did' => $userDID,
+                'hash' => $credentialHash,
+                'vc_type' => $vcType
             ]);
             
             // Fallback: generate placeholder data
@@ -1731,6 +1738,204 @@ class OrganizationController extends Controller
         ];
 
         return $vc;
+    }
+
+    /**
+     * Show issued VCs page
+     */
+    public function showIssuedVCs()
+    {
+        $organization = Auth::guard('organization')->user();
+        
+        $issuedVCs = VerifiableCredential::where('issuer_organization_id', $organization->id)
+            ->with('subject')
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return view('organization.issued-vcs', compact('issuedVCs'));
+    }
+
+    /**
+     * Revoke a verifiable credential
+     */
+    public function revokeVC(Request $request, $vcId)
+    {
+        try {
+            $organization = Auth::guard('organization')->user();
+            
+            // Find the VC
+            $vc = VerifiableCredential::where('vc_id', $vcId)
+                ->where('issuer_organization_id', $organization->id)
+                ->first();
+
+            if (!$vc) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'VC not found or you are not authorized to revoke it.'
+                ], 404);
+            }
+
+            // Check if VC is already revoked
+            if ($vc->isRevoked()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'VC is already revoked.'
+                ], 400);
+            }
+
+            // Validate request
+            $validator = Validator::make($request->all(), [
+                'revocation_reason' => 'nullable|string|max:500',
+                'private_key' => 'required|string|min:64' // Require private key from frontend
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $revocationReason = $request->input('revocation_reason', 'Revoked by issuer');
+            $privateKey = $request->input('private_key');
+
+            // Validate private key matches organization's wallet address
+            try {
+                $derivedAddress = $this->blockchainService->getAddressFromPrivateKey($privateKey);
+                
+                if ($derivedAddress !== $organization->wallet_address) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Private key does not match organization wallet address'
+                    ], 400);
+                }
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid private key format'
+                ], 400);
+            }
+
+            // Revoke on blockchain using the provided private key
+            $blockchainResult = $this->blockchainService->revokeVCWithPrivateKey(
+                $vc->subject_did,
+                $vc->credential_hash,
+                $privateKey
+            );
+
+            if (!$blockchainResult || !$blockchainResult['success']) {
+                \Log::error('Blockchain revocation failed', [
+                    'vc_id' => $vcId,
+                    'blockchain_result' => $blockchainResult
+                ]);
+
+                // Check if it's a configuration issue (for development/testing)
+                if (strpos($blockchainResult['error'] ?? '', 'not configured') !== false) {
+                    // For development/testing, allow revocation without blockchain
+                    \Log::warning('Blockchain not configured - proceeding with local revocation only', [
+                        'vc_id' => $vcId,
+                        'error' => $blockchainResult['error']
+                    ]);
+                    
+                    // Update local database only
+                    $vc->revoke($revocationReason);
+                    $vc->update([
+                        'metadata' => array_merge($vc->metadata ?? [], [
+                            'revocation_note' => 'Blockchain not configured - local revocation only',
+                            'blockchain_error' => $blockchainResult['error']
+                        ])
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'VC revoked locally (blockchain not configured).',
+                        'warning' => 'Blockchain integration not available - revocation recorded locally only.'
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to revoke VC on blockchain: ' . ($blockchainResult['error'] ?? 'Unknown error')
+                ], 500);
+            }
+
+            // Update local database
+            $vc->revoke($revocationReason);
+            $vc->update([
+                'blockchain_tx_hash' => $blockchainResult['tx_hash'],
+                'metadata' => array_merge($vc->metadata ?? [], [
+                    'revocation_tx_hash' => $blockchainResult['tx_hash'],
+                    'revocation_explorer_url' => $blockchainResult['explorer_url']
+                ])
+            ]);
+
+            \Log::info('VC revoked successfully', [
+                'vc_id' => $vcId,
+                'organization_id' => $organization->id,
+                'tx_hash' => $blockchainResult['tx_hash'],
+                'reason' => $revocationReason
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'VC revoked successfully.',
+                'tx_hash' => $blockchainResult['tx_hash'],
+                'explorer_url' => $blockchainResult['explorer_url']
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('VC revocation failed', [
+                'vc_id' => $vcId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to revoke VC: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get VC status for API
+     */
+    public function getVCStatus($vcId)
+    {
+        try {
+            $vc = VerifiableCredential::where('vc_id', $vcId)->first();
+
+            if (!$vc) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'VC not found'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'vc_id' => $vc->vc_id,
+                'status' => $vc->status,
+                'revoked' => $vc->isRevoked(),
+                'revoked_at' => $vc->revoked_at?->toISOString(),
+                'revocation_reason' => $vc->revocation_reason,
+                'expired' => $vc->isExpired(),
+                'expires_at' => $vc->expires_at?->toISOString(),
+                'issued_at' => $vc->issued_at->toISOString(),
+                'issuer_did' => $vc->issuer_did
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to get VC status', [
+                'vc_id' => $vcId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get VC status'
+            ], 500);
+        }
     }
 
     /**
