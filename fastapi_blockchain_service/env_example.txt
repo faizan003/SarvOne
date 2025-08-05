@@ -1,0 +1,70 @@
+
+APP_NAME="Sarvone"
+APP_ENV=local
+APP_KEY=base64:9KyGMaSslU1Ed9Lsnf97tQ6zjqfC9PE7+VJe2ZCW+Js=
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+# Database Configuration
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=Sarvone
+DB_USERNAME=root
+DB_PASSWORD=
+
+# QUICK NODE Configuration
+QUICK_NODE_API_URL=https://api.quicknode.com/ipfs/rest/v1/s3/put-object
+QUICK_NODE_API_KEY = QN_8c11de5e9e97480e994deaa6383901e5
+QUICK_NODE_TIMEOUT=30
+
+# Blockchain Configuration
+BLOCKCHAIN_NETWORK=Amoy
+ADMIN_PRIVATE_KEY=6001d9f1d7816625adbef25129e435495286ec2ed79f5e63540888789abb4aa5
+BLOCKCHAIN_TIMEOUT=60
+
+# Polygon Amoy Testnet Configuration
+POLYGON_RPC_URL=https://rpc-amoy.polygon.technology
+BLOCKCHAIN_RPC_URL=https://young-indulgent-patron.matic-amoy.quiknode.pro/4e4a6988984084051912a9832446801add7dffaf/
+POLYGON_CHAIN_ID=80002
+POLYGON_EXPLORER_URL=https://amoy.polygonscan.com/tx/
+CONTRACT_ADDRESS=0x959387840a40b3bc065033a5da73c75C42c46919
+POLYGON_GAS_LIMIT=200000
+POLYGON_GAS_PRICE=30
+CONTRACT_ABI_FILE=SarvOneABI.json
+# Optional: PolygonScan API Key for contract verification
+POLYGONSCAN_API_KEY=your-polygonscan-api-key-here
+
+API_HOST=0.0.0.0
+API_PORT=8003 
+BLOCKCHAIN_SERVICE_URL=http://localhost:8003
+BLOCKCHAIN_SERVICE_TIMEOUT=30
+# SecureVerify Configuration
+# DID Configuration - NEEDS TO BE UPDATED
+SECUREVERIFY_DID_PREFIX=did:sarvone:
+SECUREVERIFY_VC_CONTEXT=https://sarvone.in/credentials/v1
+SECUREVERIFY_API_VERSION=1.0
+SECUREVERIFY_TIMEZONE=Asia/Kolkata
+
+# FastAPI Service Configuration
+FASTAPI_URL=http://localhost:8001
+
+# Session and Cache Configuration
+SESSION_DRIVER=file
+CACHE_DRIVER=file
+QUEUE_CONNECTION=sync
+
+# Mail Configuration (optional)
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=your-email@gmail.com
+MAIL_FROM_NAME="${APP_NAME}"
+
+# Logging Configuration
+LOG_CHANNEL=stack
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug 

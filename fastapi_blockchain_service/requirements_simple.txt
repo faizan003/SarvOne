@@ -1,0 +1,9 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+web3==6.15.1
+pydantic==2.10.3
+python-dotenv==1.0.0
+requests==2.31.0
+# eth-account==0.12.4
+# eth-utils==5.1.0
+# hexbytes==1.2.1 

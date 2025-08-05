@@ -1,0 +1,394 @@
+[
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "anchorId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes32",
+				"name": "logRootHash",
+				"type": "bytes32"
+			}
+		],
+		"name": "LogAnchorStored",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "orgDID",
+				"type": "string"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "orgAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "string[]",
+				"name": "scopes",
+				"type": "string[]"
+			}
+		],
+		"name": "OrgApproved",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "orgDID",
+				"type": "string"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "orgAddress",
+				"type": "address"
+			}
+		],
+		"name": "OrgRevoked",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "userDID",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "vcHash",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "accessor",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "success",
+				"type": "bool"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "reason",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "VCAccessAttempt",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "userDID",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "vcHash",
+				"type": "bytes32"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "vcType",
+				"type": "string"
+			},
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "issuerDID",
+				"type": "string"
+			}
+		],
+		"name": "VCIssued",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "userDID",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "vcHash",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "issuerDID",
+				"type": "string"
+			}
+		],
+		"name": "VCRevoked",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "userDID",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "vcHash",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "string",
+				"name": "requestedScope",
+				"type": "string"
+			}
+		],
+		"name": "accessVC",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "admin",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "anchorId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "logRootHash",
+				"type": "bytes32"
+			}
+		],
+		"name": "anchorLogHash",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "orgDID",
+				"type": "string"
+			},
+			{
+				"internalType": "address",
+				"name": "orgAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "string[]",
+				"name": "scopes",
+				"type": "string[]"
+			}
+		],
+		"name": "approveOrganization",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "orgDID",
+				"type": "string"
+			}
+		],
+		"name": "getOrganization",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			},
+			{
+				"internalType": "address",
+				"name": "mainAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "string[]",
+				"name": "scopes",
+				"type": "string[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "userDID",
+				"type": "bytes32"
+			}
+		],
+		"name": "getUserVCs",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "bytes32",
+						"name": "hash",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "string",
+						"name": "vcType",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "issuedAt",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "issuerDID",
+						"type": "string"
+					},
+					{
+						"internalType": "bool",
+						"name": "revoked",
+						"type": "bool"
+					}
+				],
+				"internalType": "struct SarvOne.VC[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "userDID",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "vcHash",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "string",
+				"name": "vcType",
+				"type": "string"
+			}
+		],
+		"name": "issueVC",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "orgDID",
+				"type": "string"
+			}
+		],
+		"name": "revokeOrganization",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "userDID",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "vcHash",
+				"type": "bytes32"
+			}
+		],
+		"name": "revokeVC",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newAdmin",
+				"type": "address"
+			}
+		],
+		"name": "transferAdmin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]

@@ -1,0 +1,10 @@
+{
+  "network": "amoy",
+  "chainId": "80002",
+  "contractAddress": "0x189b9e699C0d86Ce94A4112F60c5420fb72BfF46",
+  "deploymentTx": "0xf05dded5bc9f98c4cdfb392369e845663ad8c311b1a5709bf8728129debf13c5",
+  "deployer": "0x4778eC77AC034d25687fAf8d9457b3f1FC4bB8De",
+  "timestamp": "2025-07-12T00:47:58.903Z",
+  "gasUsed": "2285588",
+  "gasPrice": "30000000000"
+}
